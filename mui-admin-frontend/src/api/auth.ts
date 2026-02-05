@@ -5,6 +5,28 @@ export interface LoginParams {
   password: string;
 }
 
+export interface menuList {
+  menuCd: string;
+  menuNm: string;
+  iconNm: string;
+  parentCd: string;
+  progCd: string;
+  sort: string;
+  sortPath: string;
+  createdAt: string;
+  updatedAt: string;
+  lv: string;
+
+}
+
+export interface menuListResult {
+  data: menuList[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+
 export interface LoginResult {
   token: string;
   id: number;
@@ -28,6 +50,12 @@ export const authApi = {
 
   getCurrentUser: async () => {
     const { data } = await api.get<User>('/auth/me');
+    return data;
+  },
+
+  
+  getMenuList: async () => {
+    const { data } = await api.get<menuList[]>('/auth/menuList');
     return data;
   },
 

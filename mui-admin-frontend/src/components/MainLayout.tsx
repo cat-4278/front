@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect,useState } from 'react';
 import {
   Box,
   Drawer,
@@ -18,6 +18,8 @@ import {
   Tabs,
   Tab,
   Collapse,
+  Snackbar,
+  Alert,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -36,6 +38,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useTabs } from '@/contexts/TabContext';
 import DashboardPage from '@/pages/Dashboard';
 import ProductListPage from '@/pages/ProductList';
+import { authApi,menuList } from '@/api/auth';
+
 
 const drawerWidth = 240;
 
@@ -59,81 +63,86 @@ interface MenuItem {
   children?: SubMenuItem[];
 }
 
-const menuItems: MenuItem[] = [
-  { 
-    id: 'dashboard', 
-    label: '대시보드', 
-    icon: <Dashboard />, 
-    component: <DashboardPage /> 
-  },
-  {
-    id: 'product-menu',
-    label: '제품',
-    icon: <ShoppingCart />,
-    children: [
-      {
-        id: 'product-view',
-        label: '조회',
-        children: [
-          { id: 'products', label: '제품 관리', component: <ProductListPage /> },
-          { id: 'product-search', label: '제품 검색', component: <div style={{ padding: 24 }}>제품 검색 페이지</div> },
-          
-        ],
-      },
-      {
-        id: 'product-manage',
-        label: '관리',
-        children: [
-          { id: 'categories', label: '카테고리 관리', component: <div style={{ padding: 24 }}>카테고리 관리 페이지</div> },
-          { id: 'inventory', label: '재고 관리', component: <div style={{ padding: 24 }}>재고 관리 페이지</div> },
-        ],
-      },
-    ],
-  },
-  {
-    id: 'user-menu',
-    label: '사용자',
-    icon: <People />,
-    children: [
-      {
-        id: 'user-view',
-        label: '조회',
-        children: [
-          { id: 'users', label: '사용자 목록', component: <div style={{ padding: 24 }}>사용자 목록 페이지</div> },
-        ],
-      },
-      {
-        id: 'user-manage',
-        label: '관리',
-        children: [
-          { id: 'roles', label: '권한 관리', component: <div style={{ padding: 24 }}>권한 관리 페이지</div> },
-        ],
-      },
-    ],
-  },
-  {
-    id: 'settings-menu',
-    label: '설정',
-    icon: <Settings />,
-    children: [
-      {
-        id: 'settings-system',
-        label: '시스템',
-        children: [
-          { id: 'general', label: '일반 설정', component: <div style={{ padding: 24 }}>일반 설정 페이지</div> },
-          { id: 'system', label: '시스템 설정', component: <div style={{ padding: 24 }}>시스템 설정 페이지</div> },
-        ],
-      },
-    ],
-  },
-];
+
 
 export default function MainLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [menuList, setMenuList] = useState<MenuItem[]>([]);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [openMenus, setOpenMenus] = useState<{ [key: string]: boolean }>({});
   const { user, logout } = useAuth();
   const { tabs, activeTab, addTab, removeTab, setActiveTab } = useTabs();
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
+  const [loading, setLoading] = useState(false);
+  
+  useEffect(() => {
+    loadMenuList();    
+  }, []);
+
+  const loadMenuList = async () => {
+    setLoading(true);
+    const result = await authApi.getMenuList();
+    setMenuList(buildMenuTree(result));
+  };
+
+  function buildMenuTree(flatMenu: any[]): MenuItem[] {
+    const menuMap = new Map();
+    const tree: MenuItem[] = [];
+    // 1단계: 모든 메뉴를 Map에 저장
+    flatMenu.forEach(menu => {
+      menuMap.set(menu.menuCd, {
+        id: menu.menuCd,
+        label: menu.menuNm,
+        icon: menu.iconNm ? getIcon(menu.iconNm) : undefined,
+        component: menu.progCd ? getComponent(menu.progCd) : undefined,
+        children: []
+      });
+
+    });
+
+    flatMenu.forEach(menu => {
+      const menuItem = menuMap.get(menu.menuCd);
+      
+      if (menu.parentCd === null) {
+        // 최상위 메뉴
+        tree.push(menuItem);
+      } else {
+        // 하위 메뉴
+        const parent = menuMap.get(menu.parentCd);
+        if (parent) {
+          parent.children.push(menuItem);
+        }
+      }
+    });
+
+   
+    return tree;
+}
+
+// 아이콘 매핑
+function getIcon(iconNm: string) {
+  const icons: Record<string, JSX.Element> = {
+    'Dashboard': <Dashboard />,
+    'ShoppingCart': <ShoppingCart />,
+    'People': <People />,
+    'Settings': <Settings />
+  };
+  return icons[iconNm];
+}
+
+// 컴포넌트 매핑
+function getComponent(progCd: string) {
+  const components: Record<string, JSX.Element> = {
+    'DashboardPage': <DashboardPage />,
+    'ProductListPage': <ProductListPage />
+  };
+  return components[progCd] || <div style={{ padding: 24 }}>{progCd}</div>;
+}
+
+
+  const showSnackbar = (message: string, severity: 'success' | 'error' = 'success') => {
+    setSnackbar({ open: true, message, severity });
+  };
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -187,7 +196,7 @@ export default function MainLayout() {
       </Toolbar>
       <Divider />
       <List>
-        {menuItems.map((item) => (
+        {menuList.map((item) => (
           <div key={item.id}>
             {/* 1 Depth - 메인 메뉴 */}
             <ListItem disablePadding>
@@ -380,6 +389,15 @@ export default function MainLayout() {
           ))}
         </Box>
       </Box>
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+      >
+        <Alert severity={snackbar.severity} sx={{ width: '100%' }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }
