@@ -119,16 +119,13 @@ export default function MainLayout() {
         }
       }
     });
-
-    
-
    
     return tree;
 }
 
 // 아이콘 매핑
 function getIcon(iconNm: string) {
-  const icons: Record<string, JSX.Element> = {
+  const icons: any = {
     'Dashboard': <Dashboard />,
     'ShoppingCart': <ShoppingCart />,
     'People': <People />,
@@ -139,7 +136,7 @@ function getIcon(iconNm: string) {
 
 // 컴포넌트 매핑
 function getComponent(progCd: string) {
-  const components: Record<string, JSX.Element> = {
+  const components: any = {
     'DashboardPage': <DashboardPage />,
     'ProductListPage': <ProductListPage />
   };
