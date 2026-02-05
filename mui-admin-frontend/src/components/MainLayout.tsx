@@ -90,13 +90,18 @@ export default function MainLayout() {
     const tree: MenuItem[] = [];
     // 1단계: 모든 메뉴를 Map에 저장
     flatMenu.forEach(menu => {
-      menuMap.set(menu.menuCd, {
+      const menuMapSub: any= {
         id: menu.menuCd,
         label: menu.menuNm,
         icon: menu.iconNm ? getIcon(menu.iconNm) : undefined,
         component: menu.progCd ? getComponent(menu.progCd) : undefined,
-        children: []
-      });
+      };
+
+      if(menu.progCd == "" || menu.progCd == null){
+          menuMapSub.children = [];
+      }
+
+      menuMap.set(menu.menuCd, menuMapSub);
 
     });
 
@@ -114,6 +119,8 @@ export default function MainLayout() {
         }
       }
     });
+
+    
 
    
     return tree;
